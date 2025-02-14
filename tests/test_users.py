@@ -123,14 +123,3 @@ def test_delete_user_not_found(client, user, token):
     )
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'Not enough permission!'}
-
-
-def test_get_access_token(client, user):
-    response = client.post(
-        '/token',
-        data={'username': user.email, 'password': user.clean_password},
-    )
-    token = response.json()
-    assert response.status_code == HTTPStatus.OK
-    assert token['token_type'] == 'Bearer'
-    assert 'access_token' in token

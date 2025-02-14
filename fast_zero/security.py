@@ -14,7 +14,7 @@ from fast_zero.database import get_session
 from fast_zero.models import User
 
 pwd_context = PasswordHash.recommended()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token')
 
 SECRET_KEY = 'your-secret-key'
 ALGORITHM = 'HS256'
@@ -46,7 +46,7 @@ def get_current_user(
 ):
     credentials_exception = HTTPException(
         status_code=HTTPStatus.UNAUTHORIZED,
-        detail='Could not validate credentials',
+        detail='Could not validate credentials!',
         headers={'WWW-Authenticate': 'Bearer'},
     )
 
