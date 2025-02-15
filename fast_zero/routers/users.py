@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -14,9 +15,13 @@ from fast_zero.security import (
 
 router = APIRouter(prefix='/users', tags=['users'])
 
+# Boa prática na definição de tipos T_
+T_Session = Annotated[Session, Depends(get_session)]
+T_CurrentUser = Annotated[User, Depends(get_current_user)]
+
 
 @router.post('/', response_model=UserPublic, status_code=HTTPStatus.CREATED)
-def create_user(user: UserSchema, session: Session = Depends(get_session)):
+def create_user(user: UserSchema, session: T_Session):
     db_user = session.scalar(
         select(User).where(
             (User.username == user.username) | (User.email == user.email)
@@ -48,15 +53,13 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
 
 
 @router.get('/', response_model=UserList)
-def read_users(
-    limit: int = 10, offset: int = 0, session: Session = Depends(get_session)
-):
+def read_users(session: T_Session, limit: int = 10, offset: int = 0):
     db_users = session.scalars(select(User).limit(limit).offset(offset))
     return {'users': db_users}
 
 
 @router.get('/{user_id}', response_model=UserPublic)
-def read_user_exercicio(user_id: int, session: Session = Depends(get_session)):
+def read_user_exercicio(user_id: int, session: T_Session):
     db_user = session.scalar(select(User).where(User.id == user_id))
     if db_user is None:
         raise HTTPException(
@@ -70,12 +73,12 @@ def read_user_exercicio(user_id: int, session: Session = Depends(get_session)):
 def update_user(
     user_id: int,
     user: UserSchema,
-    session: Session = Depends(get_session),
-    current_user=Depends(get_current_user),
+    session: T_Session,
+    current_user: T_CurrentUser,  # type: ignore
 ):
     if current_user.id != user_id:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='Not enough permission!'
+            status_code=HTTPStatus.FORBIDDEN, detail='Not enough permission!'
         )
 
     current_user.username = user.username
@@ -91,12 +94,12 @@ def update_user(
 @router.delete('/{user_id}', response_model=Message)
 def delete_user(
     user_id: int,
-    session: Session = Depends(get_session),
-    current_user=Depends(get_current_user),
+    session: T_Session,
+    current_user: T_CurrentUser,  # type: ignore
 ):
     if current_user.id != user_id:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='Not enough permission!'
+            status_code=HTTPStatus.FORBIDDEN, detail='Not enough permission!'
         )
 
     session.delete(current_user)
