@@ -3,7 +3,7 @@ from http import HTTPStatus
 from fast_zero.schemas import UserPublic
 
 
-def test_create_user(client):
+def test_create_user(client, user):
     response = client.post(
         '/users',
         json={
@@ -12,22 +12,35 @@ def test_create_user(client):
             'password': 'test123',
         },
     )
-    # Voltou o status code correto? (201)
+
     assert response.status_code == HTTPStatus.CREATED
-    # Validar UserPublic
     assert response.json() == {
-        'id': 1,
+        'id': 2,
         'username': 'test',
         'email': 'test@test.com',
     }
+
+
+def test_update_user_with_wrong_user(client, other_user, token):
+    response = client.put(
+        f'/users/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+        json={
+            'username': 'bob',
+            'email': 'bob@example.com',
+            'password': 'mynewpassword',
+        },
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Not enough permission!'}
 
 
 def test_create_user_username_already_exist(client, user):
     response = client.post(
         '/users',
         json={
-            'username': 'test',
-            'email': 'test_new@test.com',
+            'username': user.username,
+            'email': 'other@test.com',
             'password': 'test123',
         },
     )
@@ -39,12 +52,11 @@ def test_create_user_email_already_exist(client, user):
     response = client.post(
         '/users',
         json={
-            'username': 'test2',
-            'email': 'test@test.com',
+            'username': 'test_new',
+            'email': user.email,
             'password': 'test123',
         },
     )
-    # Voltou o status code correto? (201)
     assert response.status_code == HTTPStatus.BAD_REQUEST
     assert response.json() == {'detail': 'Email already exists!'}
 
@@ -94,12 +106,12 @@ def test_update_user(client, user, token):
     }
 
 
-def test_update_user_not_found(client, user, token):
+def test_update_user_not_found(client, other_user, token):
     response = client.put(
-        f'/users/{user.id + 1}',
+        f'/users/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
-            'id': f'{user.id + 1}',
+            'id': f'{other_user}',
             'username': 'test2',
             'email': 'teste2@test.com',
             'password': 'test123',
@@ -109,9 +121,10 @@ def test_update_user_not_found(client, user, token):
     assert response.json() == {'detail': 'Not enough permission!'}
 
 
-def test_delete_wrong_user(client, user, token):
+def test_delete_wrong_user(client, other_user, token):
     response = client.delete(
-        f'/users/{user.id + 1}', headers={'Authorization': f'Bearer {token}'}
+        f'/users/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},
     )
     assert response.status_code == HTTPStatus.FORBIDDEN
     assert response.json() == {'detail': 'Not enough permission!'}

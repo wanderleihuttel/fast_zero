@@ -1,13 +1,19 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fast_zero.database import get_session
 from fast_zero.models import User
-from fast_zero.schemas import Message, UserList, UserPublic, UserSchema
+from fast_zero.schemas import (
+    FilterPage,
+    Message,
+    UserList,
+    UserPublic,
+    UserSchema,
+)
 from fast_zero.security import (
     get_current_user,
     get_password_hash,
@@ -18,6 +24,7 @@ router = APIRouter(prefix='/users', tags=['users'])
 # Boa prática na definição de tipos T_
 T_Session = Annotated[Session, Depends(get_session)]
 T_CurrentUser = Annotated[User, Depends(get_current_user)]
+T_FilterPage = Annotated[FilterPage, Query()]
 
 
 @router.post('/', response_model=UserPublic, status_code=HTTPStatus.CREATED)
@@ -53,8 +60,10 @@ def create_user(user: UserSchema, session: T_Session):
 
 
 @router.get('/', response_model=UserList)
-def read_users(session: T_Session, limit: int = 10, offset: int = 0):
-    db_users = session.scalars(select(User).limit(limit).offset(offset))
+def read_users(session: T_Session, filter_user: T_FilterPage):
+    db_users = session.scalars(
+        select(User).limit(filter_user.limit).offset(filter_user.offset)
+    )
     return {'users': db_users}
 
 
